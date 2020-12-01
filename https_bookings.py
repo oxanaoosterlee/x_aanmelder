@@ -1,7 +1,7 @@
 import requests
 import json
 from dateutil import parser
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 own_tz = pytz.timezone('Europe/Amsterdam')
@@ -9,11 +9,22 @@ booking_tz = pytz.utc
 
 
 def https_bookings():
-    """ Returns all scheduled classes between a specified start and end time/date. """
+    """ Returns all scheduled classes between a specified start and end time/date.
+    Note that for this request, all times in the request/respond are in UTC time.
+    """
 
     url = "https://services.sc.tudelft.nl/api/v1/bookings"
-    start = "2020-11-30T00:00:00.000Z"  # In UTC time. Example: 2020-11-30T00:00:00.000Z
-    end = "2020-11-30T22:59:59.999Z"
+    # Get bookings for today 13:00 - next day 12:00.
+
+    # Get today's date at 13:00 (local time) in UTC time.
+    start = datetime.now(own_tz).replace(hour=13, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+    # Get tomorrow's date at 12:00 (local time) in UTC time.
+    end = datetime.now(own_tz).replace(hour=12, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+    end += timedelta(days=1)
+
+    # Convert to required format
+    start = start.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'
+    end = end.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'
 
     # Body&Mind: '67423d08-2113-444f-8a5e-3e97f479078f'
     # Aerobics: 'f2ae664c-f420-4609-8933-89eb8010e3f4'

@@ -18,7 +18,7 @@ class x_aanmelder():
 
 		#Todo: Read from .csv
 		self.lesson = "Yogalates" # HiiT, LBT
-		self.start_date_time = parser.parse("01-12-2020 19:15").astimezone(pytz.timezone('Europe/Amsterdam'))
+		self.start_date_time = parser.parse("01-12-2020 19:15", dayfirst=True).astimezone(pytz.timezone('Europe/Amsterdam'))
 
 		self.locations = ["Body & Mind", "Ballet Studio", "Aerobics"]
 
@@ -32,17 +32,6 @@ class x_aanmelder():
 		chrome_options.add_argument("--window-size=1920,1080")
 		driver = webdriver.Chrome(options=chrome_options)
 		return driver
-
-	def enrolling_available(self):
-		""" Check if classes are available for enrolling on the current page.
-		(if not, the page shows "There are no bookings on this day").
-		When classes do not show up yet, refresh every 2 seconds.
-		"""
-		try:
-			WebDriverWait(self.driver, 5).until(ec.presence_of_element_located((By.XPATH, "//h3[@class='headline mb-0']")))
-			return True
-		except:
-			return False
 
 	def enter_credentials(self):
 		"""
@@ -69,28 +58,23 @@ class x_aanmelder():
 		""" Check in the bookings (the schedule of all available lessons), if the requested booking is there. If not,
 		throw an error.
 		"""
-		found = False
 		booking_schedule = https_bookings()
-		#print(booking_schedule)
 		for item in booking_schedule:
 			if self.lesson in item['description']:
 				if self.start_date_time == parser.isoparse(item['start']):
 					print("Booking id in 'booking' is: %d" % item['booking_id'])
-					break
-
+					return True
+		# If it cannot be found, something is wrong.
+		print(booking_schedule)
+		return False
 
 	def run_aanmelder(self):
 		print("Trying to reserve %s at time %s" % (self.lesson, self.start_date_time))
 		self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
-		# Get bookings (schedule with all the times and classes)
-		booking_schedule = https_bookings()
-		#print(booking_schedule)
-		for item in booking_schedule:
-			if self.lesson in item['description']:
-				if self.start_date_time == parser.isoparse(item['start']):
-					print("Booking id in 'booking' is: %d" % item['booking_id'])
-					break
+		# Check if requested booking is valid (can be found in the schedule calendar).
+		if not self.find_requested_booking_in_bookings():
+			raise Exception("Cannot find requested class in booking schedule!")
 
 		while not self.reserved:
 			# Go to website
