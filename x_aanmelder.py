@@ -2,11 +2,14 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
-from plyer import notification
+from https_bookings import https_bookings
+from https_schedule import request_schedule
+from dateutil import parser
+import pytz
+from https_addBooking import https_addBooking
 import time
 from datetime import datetime
 from datetime import time as t
-
 
 class x_aanmelder():
 	def __init__(self):
@@ -14,16 +17,19 @@ class x_aanmelder():
 		self.reserved = False
 
 		#Todo: Read from .csv
-		self.available_lessons = ["Body"]
-		self.start_times = ["09:15"]
+		self.lesson = "Yogalates" # HiiT, LBT
+		self.start_date_time = parser.parse("01-12-2020 19:15").astimezone(pytz.timezone('Europe/Amsterdam'))
 
+		self.locations = ["Body & Mind", "Ballet Studio", "Aerobics"]
 
 	def init_webdriver(self):
 		""" Initialize a webdriver. """
 		# Don't show the window
 		chrome_options = webdriver.ChromeOptions()
-		chrome_options.add_argument('--disable-notifications')
-		#chrome_options.add_argument("--headless")
+		chrome_options.add_argument("--headless")
+		chrome_options.add_argument("--allow-running-insecure-content")
+		chrome_options.add_argument("--allow-insecure-localhost")
+		chrome_options.add_argument("--window-size=1920,1080")
 		driver = webdriver.Chrome(options=chrome_options)
 		return driver
 
@@ -33,8 +39,7 @@ class x_aanmelder():
 		When classes do not show up yet, refresh every 2 seconds.
 		"""
 		try:
-			WebDriverWait(self.driver, 2).until(ec.presence_of_element_located((By.XPATH, "//h3[@class='headline mb-0']")))
-			print("TRUE")
+			WebDriverWait(self.driver, 5).until(ec.presence_of_element_located((By.XPATH, "//h3[@class='headline mb-0']")))
 			return True
 		except:
 			return False
@@ -56,44 +61,43 @@ class x_aanmelder():
 		self.driver.find_element_by_id("password").send_keys(password)
 		self.driver.find_element_by_id("submit_button").click()
 
-		# Weird empty page appears after logging in, so refresh.
-		self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
+		# Weird empty page appears after logging in, so refresh after it loads.
+		WebDriverWait(self.driver, 20).until(ec.presence_of_element_located((By.XPATH, "//div[@class='dialog__content']")))
+		self.driver.get("https://x.tudelft.nl/nl/members/dashboard")
 
-
-	def get_correct_lesson_card(self, lesson_name, lesson_start_time):
-		""" Return the lesson card for the requested lesson on the 'enrol' page.
-			Lesson cards are the 'blocks' where each lesson is represented in with their info.
+	def find_requested_booking_in_bookings(self):
+		""" Check in the bookings (the schedule of all available lessons), if the requested booking is there. If not,
+		throw an error.
 		"""
+		found = False
+		booking_schedule = https_bookings()
+		#print(booking_schedule)
+		for item in booking_schedule:
+			if self.lesson in item['description']:
+				if self.start_date_time == parser.isoparse(item['start']):
+					print("Booking id in 'booking' is: %d" % item['booking_id'])
+					break
 
-		# Get the correct lesson. There can be more of the same class at different times
-		# Pick the one with the right time.
-		# todo: make case insensitive
-		lessons = self.driver.find_elements(By.XPATH, "//h3[@class='headline mb-0' and contains(text(), '%s')]" %
-											self.available_lessons[0])
-		for lesson in lessons:
-			lesson_card = lesson.find_element_by_xpath(".//ancestor::div[contains(@class, 'card')]")
-
-			# Get time
-			time_txt = lesson_card.find_element_by_xpath(".//b[text()[contains(.,'Time')]]").find_element_by_xpath(
-				".//ancestor::p").text
-			time_txt = time_txt.replace("Time:", "").strip().split("\n")[0].split(" - ")
-			start_time, end_time = time_txt[0], time_txt[1]
-
-			print("Found lesson %s at start time %s" % (lesson_name, lesson_start_time))
-			if start_time != lesson_start_time:
-				print("Not the correct one. Skipping.")
-				continue
-			else:
-				return lesson_card
-
-		raise Exception("Could not find lesson %s at time %s" % (lesson_name, lesson_start_time))
 
 	def run_aanmelder(self):
+		print("Trying to reserve %s at time %s" % (self.lesson, self.start_date_time))
+		self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
+
+		# Get bookings (schedule with all the times and classes)
+		booking_schedule = https_bookings()
+		#print(booking_schedule)
+		for item in booking_schedule:
+			if self.lesson in item['description']:
+				if self.start_date_time == parser.isoparse(item['start']):
+					print("Booking id in 'booking' is: %d" % item['booking_id'])
+					break
+
 		while not self.reserved:
 			# Go to website
 			self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
 			# Wait until 12:59 before logging in (enrollment starts at 13:00)
+			if datetime.now().time() < t(12,59): print("Waiting until 12:59 before logging in.")
 			while datetime.now().time() < t(12, 59): time.sleep(2)
 
 			# Click on the TU logo thingy (only necessary if it is required to log in again)
@@ -103,74 +107,72 @@ class x_aanmelder():
 			# The button can only be found when it is needed to log in again.
 			if len(log_in_button) > 0:
 				log_in_button[0].click()
+				print("Logging in..")
 				self.enter_credentials()
 
-			# Navigate to correct menu
-			reserveren_btn = WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.LINK_TEXT, "Reserveren")))
-			reserveren_btn.click()
+			# Get session token (can be find in the url that leads to the reservation. token is regenerated after each login).
+			print("Getting token")
+			WebDriverWait(self.driver, 20).until(ec.presence_of_element_located((By.XPATH, "//a[text()[contains(.,'Reserveren')]]")))
+			reserveren_btn = self.driver.find_element(By.XPATH, "//a[text()[contains(.,'Reserveren')]]")
+			reserveren_href = reserveren_btn.get_attribute('href')
+			token_start, token_end = reserveren_href.find("token") + 6, reserveren_href.find("&redirect")
+			token = reserveren_href[token_start:token_end]
+			print("Got token")
 
-			# Click on the class location at 13:00, when enrollment starts.
-			location = "Aerobics" #todo: check if full name is needed or part is also fine
-			location_btn = WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, '//div[text()="%s"]' % location)))
-			while datetime.now().time() < t(13,00): time.sleep(1)
-			location_btn.click()
+			# Wait for 13:00
+			if datetime.now().time() < t(13,00): print("Waiting until 13:00 before attempting to make a booking.")
+			while datetime.now().time() < t(13, 00): time.sleep(2)
 
-			# Check if enrollment is available, if not, refresh the page and keep checking until it becomes available.
-			while True:
-				if self.enrolling_available():
-					break
-				else:
-					self.driver.refresh()
+			# Get schedule for each location (available bookings for a certain location)
+			# and find the requested lesson.
+			print("Trying to find requested lesson available for booking..")
+			lesson = None
+			i = 0
+			while lesson is None:
+				for location in self.locations:
+					sched = request_schedule(location, token)
+					if len(sched['schedule']) == 0: continue # No available bookings for this location.
+					available_lessons = sched['schedule'][0]['bookings']
+					for available_lesson in available_lessons:
+						print("Found lesson %s with booking_id %s at time %s" % (available_lesson['Description'], available_lesson['Booking_id'], available_lesson['Start_date']))
+						# Check if correct lesson
+						if self.lesson in available_lesson['Description']:
+							# Check time
+							starting_time = parser.parse(available_lesson['Start_date']).astimezone(pytz.timezone('Europe/Amsterdam'))
+							if starting_time == self.start_date_time:
+								print("Found correct lesson")
+								lesson = available_lesson
+								break
+				i += 1
+				print("\rRetrying. i = %d" % i, end='')
+				time.sleep(0.5)
+			print("Found it!")
 
-
-			lesson_card = self.get_correct_lesson_card(self.available_lessons[0], self.start_times[0])
-
-			# Get occupancy of the lesson
-			occupancy_txt = lesson_card.find_element_by_xpath(".//span").text
-			occupancy_txt = occupancy_txt.replace("Occupation", "").replace(":", "").strip().split('/')
-			occupancy, capacity = int(occupancy_txt[0]), int(occupancy_txt[1])
-			print("Occupancy: %d/%d" % (occupancy, capacity))
-
-			# Check if already enrolled
-			button = lesson_card.find_element_by_xpath(".//button")
-			if button.text == "CANCEL":
-				print("Already enrolled!")
-				self.reserved=True
+			# Check if lesson is already booked.
+			if lesson['Booked']:
+				print("Already booked!")
+				self.reserved = True
 				return
 
-			# Enroll if there is space.
-			if occupancy < capacity:
-				print("Space available!")
+			# Get booking id of the lesson and make a booking.
+			booking_id = lesson['Booking_id']
+			print("The retrieved booking id is %s" % booking_id)
 
-				# Send out a notification
-				notification.notify(
-					title="SPACE AVAILABLE",
-					message="SPACE AVAILABLE FOR %s at %s" % (self.available_lessons[0], self.start_times[0])
-				)
-
-				# Click on 'add' (subscribe for lesson)
-				add_button = lesson_card.find_element_by_xpath(".//button")
-				add_button.click()
-				time.sleep(10)
-
-				# Need to get lesson card again (the page takes some time to reload after clicking the enroll button),
-				lesson_card = self.get_correct_lesson_card(self.available_lessons[0], self.start_times[0])
-				WebDriverWait(self.driver, 10).until(ec.presence_of_element_located((By.XPATH, ".//button")))
-				button = lesson_card.find_element_by_xpath(".//button")
-				if button.text == "CANCEL":
-					print("Reservation succesfull.")
+			# Make booking
+			if int(lesson['Bezetting']) < int(lesson['Max_participants']):
+				success = https_addBooking(booking_id, token)
+				if success:
+					print("Successfully made booking.")
 					self.reserved = True
+					return
 				else:
-					print("Reservation failed")
-
+					print("Failed to make booking.")
 			else:
-				now = datetime.now()
-				current_time = now.strftime("%H:%M:%S")
-				print("(%s) No space available.." % current_time)
+				print("Lesson full")
 
-				# If still just after 13:00, retry immediately. Else, retry every 3 minutes or so.
-				if datetime.now().time() < t(13, 5): continue
-				else: time.sleep(3 * 60)
+			# Retrying to make a booking. Need to refresh the page in case token expires and
+			# we need to log in again
+			time.sleep(1)
 
 
 
