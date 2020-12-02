@@ -19,7 +19,7 @@ class x_aanmelder():
 		self.reserved = False
 
 		#Todo: Read from .csv
-		self.lesson = "Body Power" # HiiT, LBT
+		self.lesson = "body power" # HiiT, LBT
 		self.start_date_time = parser.parse("02-12-2020 20:30", dayfirst=True).astimezone(pytz.timezone('Europe/Amsterdam'))
 
 		self.locations = ["Body & Mind", "Ballet Studio", "Aerobics"]
@@ -63,21 +63,24 @@ class x_aanmelder():
 		"""
 		booking_schedule = https_bookings()
 		for item in booking_schedule:
-			if self.lesson in item['description']:
+			if self.lesson.lower() in item['description'].lower():
 				if self.start_date_time == parser.isoparse(item['start']):
 					print("Booking id in 'booking' is: %d" % item['booking_id'])
-					return True
+					return item
 		# If it cannot be found, something is wrong.
 		print(booking_schedule)
-		return False
+		raise Exception("Cannot find requested class in booking schedule!")
 
 	def run_aanmelder(self):
 		print("Trying to reserve %s at time %s" % (self.lesson, self.start_date_time))
 		self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
 		# Check if requested booking is valid (can be found in the schedule calendar).
-		if not self.find_requested_booking_in_bookings():
-			raise Exception("Cannot find requested class in booking schedule!")
+		booking = self.find_requested_booking_in_bookings()
+
+		# Use booking to get the location name (id and 'english' name)
+		location_id = booking['location']
+		location_name = booking['locationNameEN']
 
 		while not self.reserved:
 			# Go to website
@@ -110,45 +113,46 @@ class x_aanmelder():
 			if datetime.now().time() < t(13,00): print("Waiting until 13:00 before attempting to make a booking.")
 			while datetime.now().time() < t(13, 00): time.sleep(2)
 
-			# Get schedule for each location (available bookings for a certain location)
-			# and find the requested lesson.
-			# todo make this part nicer
-			# Note: find location in 'bookings' so you don't have to loop through them!
 			print("Trying to find requested lesson available for booking..")
-			lesson = None
+
+			# Returns the schedule (available bookings) for today (evening) and tomorrow (morning).
+			# Todo: check what happens when schedule is requested to early (e.g., 12:30).
+			schedule = request_schedule(location_name, token)
+
+			# Only keep the schedule for the requested date
+			schedule = [x for x in schedule if parser.parse(x['day'], dayfirst=True).date() == self.start_date_time.date()][0]
+
+			correct_booking = None
 			i = 0
-			while lesson is None:
-				for location in self.locations:
-					sched = request_schedule(location, token)
-					if len(sched['schedule']) == 0: continue # No available bookings for this location.
-					available_lessons = sched['schedule'][0]['bookings']
-					for available_lesson in available_lessons:
-						print("Found lesson %s with booking_id %s at time %s" % (available_lesson['Description'], available_lesson['Booking_id'], available_lesson['Start_date']))
-						# Check if correct lesson
-						if self.lesson in available_lesson['Description']:
-							# Check time
-							starting_time = parser.parse(available_lesson['Start_date']).astimezone(pytz.timezone('Europe/Amsterdam'))
-							if starting_time == self.start_date_time:
-								print("Found correct lesson")
-								lesson = available_lesson
-								break
-				i += 1
-				print("\rRetrying. i = %d" % i, end='')
-				time.sleep(0.5)
-			print("Found it!")
+			# Find the request lesson in this schedule
+			while correct_booking is None:
+				for available_booking in schedule['bookings']:
+					# Check if lesson name and starting time matches
+					if self.lesson.lower() in available_booking['Description'].lower() and parser.parse(
+							available_booking['Start_date']).astimezone(
+							pytz.timezone('Europe/Amsterdam')) == self.start_date_time:
+						correct_booking = available_booking
+						break
+				if correct_booking is None:
+					i += 1
+					print("\rRetrying. i = %d" % i, end='')
+					time.sleep(0.5)
+
+			print("Found the requested lesson!")
+
 
 			# Check if lesson is already booked.
-			if lesson['Booked']:
+			if correct_booking['Booked']:
 				print("Already booked!")
 				self.reserved = True
 				return
 
 			# Get booking id of the lesson and make a booking.
-			booking_id = lesson['Booking_id']
+			booking_id = correct_booking['Booking_id']
 			print("The retrieved booking id is %s" % booking_id)
 
 			# Make booking
-			if int(lesson['Bezetting']) < int(lesson['Max_participants']):
+			if int(correct_booking['Bezetting']) < int(correct_booking['Max_participants']):
 				print("Requesting booking at time %s." % str(datetime.now().time()))
 				success = https_addBooking(booking_id, token)
 				if success:

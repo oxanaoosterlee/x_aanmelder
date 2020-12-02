@@ -30,7 +30,7 @@ def request_schedule(location, token):
     if p.status_code != 200:
         raise Exception("Failed to request schedule. Error: %s" % p.text)
     data = json.loads(p.content)
-
+    schedule = data['schedule']
     # Schedule is returned using AMS timezone!!
 
-    return data
+    return schedule
