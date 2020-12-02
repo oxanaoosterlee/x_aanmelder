@@ -11,6 +11,7 @@ from https_addBooking import https_addBooking
 import time
 from datetime import datetime
 from datetime import time as t
+import os
 
 class x_aanmelder():
 	def __init__(self):
@@ -18,8 +19,8 @@ class x_aanmelder():
 		self.reserved = False
 
 		#Todo: Read from .csv
-		self.lesson = "Yogalates" # HiiT, LBT
-		self.start_date_time = parser.parse("01-12-2020 19:15", dayfirst=True).astimezone(pytz.timezone('Europe/Amsterdam'))
+		self.lesson = "Body Power" # HiiT, LBT
+		self.start_date_time = parser.parse("02-12-2020 20:30", dayfirst=True).astimezone(pytz.timezone('Europe/Amsterdam'))
 
 		self.locations = ["Body & Mind", "Ballet Studio", "Aerobics"]
 
@@ -39,7 +40,8 @@ class x_aanmelder():
 		Read the user's credentials from 'credentials.txt'.
 		Use them to log in on the TU login page.
 		"""
-		credentials_file = open("credentials.txt")
+		script_directory = os.path.dirname(os.path.realpath(__file__))
+		credentials_file = open(script_directory + "/credentials.txt")
 		username = credentials_file.readline().replace("username:", "").strip()
 		password = credentials_file.readline().replace("password:", "").strip()
 
@@ -111,6 +113,7 @@ class x_aanmelder():
 			# Get schedule for each location (available bookings for a certain location)
 			# and find the requested lesson.
 			# todo make this part nicer
+			# Note: find location in 'bookings' so you don't have to loop through them!
 			print("Trying to find requested lesson available for booking..")
 			lesson = None
 			i = 0
