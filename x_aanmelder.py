@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -109,6 +110,7 @@ class x_aanmelder():
 
 			# Get schedule for each location (available bookings for a certain location)
 			# and find the requested lesson.
+			# todo make this part nicer
 			print("Trying to find requested lesson available for booking..")
 			lesson = None
 			i = 0
@@ -144,9 +146,10 @@ class x_aanmelder():
 
 			# Make booking
 			if int(lesson['Bezetting']) < int(lesson['Max_participants']):
+				print("Requesting booking at time %s." % str(datetime.now().time()))
 				success = https_addBooking(booking_id, token)
 				if success:
-					print("Successfully made booking.")
+					print("Successfully made booking at time %s." % str(datetime.now().time()))
 					self.reserved = True
 					return
 				else:
