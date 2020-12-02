@@ -58,3 +58,10 @@ def https_bookings():
     return data
 
     # Location ids
+
+if __name__ == "__main__":
+    data = https_bookings()
+    print(data)
+
+
+    

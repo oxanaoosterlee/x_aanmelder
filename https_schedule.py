@@ -31,6 +31,6 @@ def request_schedule(location, token):
         raise Exception("Failed to request schedule. Error: %s" % p.text)
     data = json.loads(p.content)
     schedule = data['schedule']
-    # Schedule is returned using AMS timezone!!
 
+    # Schedule is returned using AMS timezone!!
     return schedule
