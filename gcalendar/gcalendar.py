@@ -7,21 +7,31 @@ from datetime import datetime
 
 from dateutil import parser
 from googleapiclient.discovery import build
-
+from google.auth.transport.requests import Request
 
 def is_calendar_available():
     """ Check if calendar is authenticated and can be used. """
     calendar_dir = os.path.dirname(os.path.realpath(__file__))
     try:
+        # Check if credits exist
         if os.path.exists(calendar_dir + '/token.pickle'):
             with open(calendar_dir + '/token.pickle', 'rb') as token:
                 creds = pickle.load(token)
-                if creds and creds.valid:
-                    return True
-                else:
-                    print("Google Calendar not available. Check README to set it up.")
-                    return False
+
+            # Refresh token if necessary
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+                with open(calendar_dir + '/token.pickle', 'wb') as token:
+                    pickle.dump(creds, token)
+
+            # Check if credits are valid now.
+            if creds and creds.valid:
+                return True
+            else:
+                print("Google Calendar not available. Check README to set it up.")
+                return False
         else:
+            print("Google Calendar not available. Check README to set it up.")
             return False
     except:
         print("Google Calendar not available. Check README to set it up.")
@@ -52,7 +62,10 @@ def add_booking_to_calendar(booking, booked=True):
     # Do -1 to have some slack between creating the event and sending the reminder.
     minutes_left = math.floor((start - datetime.utcnow()).total_seconds()/60) - 1
 
-    service = get_calendar_service()
+    if is_calendar_available():
+        service = get_calendar_service()
+    else:
+        return False
 
     event = {
         'summary': title,
@@ -70,7 +83,7 @@ def add_booking_to_calendar(booking, booked=True):
             'useDefault': False,
             'overrides': [
                 #{'method': 'email', 'minutes': 24 * 60},
-                {'method': 'popup', 'minutes': 10},
+                {'method': 'popup', 'minutes': 60},
                 {'method': 'popup', 'minutes': minutes_left}
             ],
         },
