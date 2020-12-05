@@ -28,7 +28,7 @@ crontab -e
 Add the following line at the end:
 
 ```
-50 12 * * * export DISPLAY=:0 && /home/oxana/Documents/x_aanmelder/job.sh
+55 12 * * * export DISPLAY=:0 && /home/oxana/Documents/x_aanmelder/job.sh
 ```
 
 This starts a terminal at 12:55 every day running the script. Remove `DISPLAY=:0 &&` to run in the background.
