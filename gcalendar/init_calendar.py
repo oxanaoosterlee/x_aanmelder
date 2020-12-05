@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from __future__ import print_function
 
 import os.path
@@ -34,6 +36,7 @@ def create_calendar_service():
 
     service = build('calendar', 'v3', credentials=creds)
     return service
+
 
 if __name__ == '__main__':
     service = create_calendar_service()

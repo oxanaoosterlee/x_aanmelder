@@ -8,19 +8,22 @@ own_tz = pytz.timezone('Europe/Amsterdam')
 booking_tz = pytz.utc
 
 
-def https_bookings():
+def https_bookings(days=1):
     """ Returns all scheduled classes between a specified start and end time/date.
     Note that for this request, all times in the request/respond are in UTC time.
     """
 
     url = "https://services.sc.tudelft.nl/api/v1/bookings"
-    # Get bookings for today 13:00 - next day 12:00.
+    # Get bookings for today 13:00 - next day 14:00.
 
     # Get today's date at 13:00 (local time) in UTC time.
     start = datetime.now(own_tz).replace(hour=13, minute=0, second=0, microsecond=0).astimezone(booking_tz)
-    # Get tomorrow's date at 12:00 (local time) in UTC time.
-    end = datetime.now(own_tz).replace(hour=12, minute=0, second=0, microsecond=0).astimezone(booking_tz)
-    end += timedelta(days=1)
+    # Get the current time in UTC time
+    #start = datetime.now(booking_tz)
+
+    # Get tomorrow's date at 14:00 (local time) in UTC time.
+    end = datetime.now(own_tz).replace(hour=14, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+    end += timedelta(days=days)
 
     # Convert to required format
     start = start.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'

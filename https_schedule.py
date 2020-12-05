@@ -2,7 +2,7 @@ import requests
 import json
 
 
-def request_schedule(location, token):
+def https_schedule(location, token):
     """ Returns the classes currently available for booking.
     So after 13:00, returns all classes for that evening + the next morning.
     """
