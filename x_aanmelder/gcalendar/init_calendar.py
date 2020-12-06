@@ -15,7 +15,7 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def create_calendar_service():
     creds = None
-    calendar_data_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/data/gcalendar/'
+    calendar_data_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+ '/data/gcalendar/'
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.

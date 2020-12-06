@@ -43,7 +43,7 @@ class x_aanmelder():
         Read the user's credentials from 'credentials.txt'.
         Use them to log in on the TU login page.
         """
-        script_directory = os.path.dirname(os.path.dirname(__file__))
+        script_directory = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         credentials_file = open(script_directory + "/data/account/credentials.txt")
         username = credentials_file.readline().replace("username:", "").strip()
         password = credentials_file.readline().replace("password:", "").strip()
