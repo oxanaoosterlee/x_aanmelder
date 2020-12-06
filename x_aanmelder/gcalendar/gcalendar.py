@@ -16,18 +16,18 @@ booking_tz = pytz.utc
 
 def is_calendar_available():
     """ Check if calendar is authenticated and can be used. """
-    calendar_dir = os.path.dirname(os.path.realpath(__file__))
+    calendar_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/data/gcalendar/'
     try:
         # Check if credits exist
-        if os.path.exists(calendar_dir + '/token.pickle'):
-            with open(calendar_dir + '/token.pickle', 'rb') as token:
+        if os.path.exists(calendar_dir + 'token.pickle'):
+            with open(calendar_dir + 'token.pickle', 'rb') as token:
                 creds = pickle.load(token)
 
             # Refresh token if necessary
             if creds and creds.expired and creds.refresh_token:
                 print("Refreshing token.")
                 creds.refresh(Request())
-                with open(calendar_dir + '/token.pickle', 'wb') as token:
+                with open(calendar_dir + 'token.pickle', 'wb') as token:
                     pickle.dump(creds, token)
 
             # Check if credits are valid now.
@@ -47,9 +47,9 @@ def is_calendar_available():
 def get_calendar_service():
     """ Returns the calendar service that can be used for adding events to the calendar. """
     creds = None
-    calendar_dir = os.path.dirname(os.path.realpath(__file__))
-    if os.path.exists(calendar_dir + '/token.pickle'):
-        with open(calendar_dir + '/token.pickle', 'rb') as token:
+    calendar_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__))) + '/data/gcalendar/'
+    if os.path.exists(calendar_dir + 'token.pickle'):
+        with open(calendar_dir + 'token.pickle', 'rb') as token:
             creds = pickle.load(token)
     service = build('calendar', 'v3', credentials=creds)
     return service

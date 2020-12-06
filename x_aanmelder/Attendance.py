@@ -18,7 +18,7 @@ class Attendance:
     """
 
     def __init__(self):
-        self.attendance_file = os.path.dirname(os.path.realpath(__file__)) + "/attendance.csv"
+        self.attendance_file = os.path.dirname(os.path.dirname(__file__)) + "/data/attendance.csv"
         self.attendance_df = self.read_from_csv(self.attendance_file)
 
     def update_file(self):
