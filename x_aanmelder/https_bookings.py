@@ -21,8 +21,14 @@ def https_bookings(days=1):
     # Get the current time in UTC time
     #start = datetime.now(booking_tz)
 
-    # Get tomorrow's date at 14:00 (local time) in UTC time.
-    end = datetime.now(own_tz).replace(hour=14, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+    # If days = 1, get tomorrow's date at 14:00 (local time) in UTC time.
+    # Else, get the date x days ahead at 23:00 (local time) in UTC time. 
+    # Because in this case, we want to get ALL bookings of the day, not just the morning ones.
+    if days == 1:
+        end = datetime.now(own_tz).replace(hour=14, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+    else:
+        end = datetime.now(own_tz).replace(hour=23, minute=0, second=0, microsecond=0).astimezone(booking_tz)
+
     end += timedelta(days=days)
 
     # Convert to required format
