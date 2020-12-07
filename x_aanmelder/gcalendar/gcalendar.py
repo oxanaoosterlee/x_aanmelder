@@ -103,6 +103,7 @@ def add_calendar_event(title, start, end, location, trainer, booked=False):
     event = {
         'summary': title,
         'location': location,
+        'colorId': "6",
         'description': 'Trainer: %s\nCalendar event added by x_aanmelder.' % trainer,
         'start': {
             'dateTime': start.isoformat(),
@@ -111,7 +112,9 @@ def add_calendar_event(title, start, end, location, trainer, booked=False):
         'end': {
             'dateTime': end.isoformat(),
             'timeZone': 'Europe/Amsterdam',
-        }}
+        }
+
+    }
 
     event = service.events().insert(calendarId='primary', body=event).execute()
     if booked: set_event_booked(event['id'])
