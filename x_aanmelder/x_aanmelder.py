@@ -94,6 +94,8 @@ class x_aanmelder():
     def run_aanmelder(self):
         self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
+        if len(self.requested_bookings) == 0:
+            print("No bookings to make today.")
         # Loop through all requested bookings.
         for requested_booking in self.requested_bookings:
             self.reserved = False

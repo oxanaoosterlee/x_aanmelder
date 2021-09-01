@@ -3,6 +3,7 @@ import json
 from dateutil import parser
 from datetime import datetime, timedelta
 import pytz
+from https_locations import https_locations
 
 own_tz = pytz.timezone('Europe/Amsterdam')
 booking_tz = pytz.utc
@@ -35,10 +36,12 @@ def https_bookings(days=1):
     start = start.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'
     end = end.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + 'Z'
 
-    # Body&Mind: '67423d08-2113-444f-8a5e-3e97f479078f'
-    # Aerobics: 'f2ae664c-f420-4609-8933-89eb8010e3f4'
-    # Ballet studio: '34e4f6c5-44e3-4eae-b9c8-442dfecf01b4'
-    locations = '["67423d08-2113-444f-8a5e-3e97f479078f", "f2ae664c-f420-4609-8933-89eb8010e3f4", "34e4f6c5-44e3-4eae-b9c8-442dfecf01b4"]'
+    # Locations that we want to go to
+    location_names = ["Aerobics", "FTO Aerobics", "FTO Body & Mind", "Body & Mind", "FTO Combat", "Combat"]
+
+    # Convert location strings to location IDs
+    locations = [https_locations(loc) for loc in location_names]
+    locations = '["' + '", \"'.join(locations) + '"]'
 
     data = '{"start":"' + start + '", "end":"' + end + '","locations":' + locations + '}'
     headers = {

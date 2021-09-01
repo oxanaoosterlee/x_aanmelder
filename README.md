@@ -58,6 +58,4 @@ To automatically enable the script to put reserved bookings in google calendar, 
 
 ### Notes
 
-- If you want to add extra locations, you can add these in `https_bookings` (the `locations` list). You can find the
-  location id by investigating the response to the 'bookings' request on the timetable page.
-
+- If you want to add extra locations, you can add these in `https_bookings` (the `location_names` list).
