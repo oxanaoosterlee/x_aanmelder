@@ -40,13 +40,21 @@ def authenticate():
 def get_calendar_service():
     creds = authenticate()
     if creds is None: return None
-    service = build('calendar', 'v3', credentials=creds)
+    try:
+        service = build('calendar', 'v3', credentials=creds)
+    except:
+        return None
     return service
 
+
 def get_sheets_service():
+    service = None
     creds = authenticate()
     if creds is None: return None
-    service = build('calendar', 'v3', credentials=creds)
+    try:
+        service = build('sheets', 'v4', credentials=creds)
+    except:
+        return None
     return service
 
 

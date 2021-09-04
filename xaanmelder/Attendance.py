@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 
-import os
-
 import pandas as pd
-
-from google.gcalendar import *
-from https_bookings import https_bookings
-
+from xaanmelder.googleapi.gcalendar import *
+from xaanmelder.googleapi.gsheets import *
+from xaanmelder.https_bookings import https_bookings
+import pytz
+import os
 own_tz = pytz.timezone('Europe/Amsterdam')
 
 
@@ -20,6 +19,14 @@ class Attendance:
     def __init__(self):
         self.attendance_file = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + "/data/attendance.csv"
         self.attendance_df = self.read_from_csv(self.attendance_file)
+
+        # Enable using Google Sheets for marking attendance. If False, an offline csv file is used located in the
+        # /data directory.
+        self.use_gsheets = True
+
+        # Check if google sheets is correctly setup
+        if self.use_gsheets and not gsheets_available():
+            self.use_gsheets = False
 
     def update_file(self):
         """
@@ -56,7 +63,7 @@ class Attendance:
 
         # Merge attendance information from old file into the new dataframe
         # Only merge old attendance information when it actually exists.
-        old_attendance = self.read_from_csv(self.attendance_file)
+        old_attendance = get_sheet_data() if self.use_gsheets else self.read_from_csv(self.attendance_file)
 
         if not old_attendance.empty:
             new_attendance = pd.merge(new_attendance, old_attendance[['Start', 'Class', 'Attend']],
@@ -66,8 +73,8 @@ class Attendance:
 
         # Store the newly merged dataframe
         self.attendance_df = new_attendance
-        self.write_to_csv(new_attendance)
-        print("Updated 'attendance.csv'")
+        write_sheet_data(new_attendance) if self.use_gsheets else self.write_to_csv(new_attendance)
+        print("Updated 'attendance file'")
 
     def get_todays_requested_bookings(self):
         """
@@ -95,14 +102,14 @@ class Attendance:
         return todays_requested_bookings
 
     def update_calendar(self):
-        """ Update google calendar with all desired bookings.
+        """ Update googleapi calendar with all desired bookings.
         Also remove bookings that are in calendar but are not marked with 'x' anymore.
         """
-        if not is_calendar_available():
+        if get_calendar_service() is None:
             print("Calendar is not available")
             return
 
-        # Add items marked with 'x' in attendance_df to the google calendar.
+        # Add items marked with 'x' in attendance_df to the googleapi calendar.
         attending_events = self.attendance_df.loc[self.attendance_df['Attend'].str.strip() == 'x']
         for i, event in attending_events.iterrows():
             add_calendar_event(
@@ -114,7 +121,7 @@ class Attendance:
                 booked=False
             )
 
-        # Check google calendar events made by this script.
+        # Check googleapi calendar events made by this script.
         # 1. Remove calendar events that are not in 'attending_events'.
         # 2. Update the location of the event in case it is incorrect
         calendar_events = get_all_x_aanmelder_events()

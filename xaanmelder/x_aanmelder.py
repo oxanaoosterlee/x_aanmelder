@@ -7,13 +7,18 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 
 from Attendance import Attendance
-from google.gcalendar import *
 from https_addBooking import https_addBooking
 from https_bookings import https_bookings
 from https_schedule import https_schedule
 
+from dateutil import parser
+import pytz
+from datetime import datetime
+from xaanmelder.googleapi.OAuth.oauth import get_calendar_service
+from xaanmelder.googleapi.gcalendar import add_schedule_booking_to_calendar
 
 class x_aanmelder():
     def __init__(self):
@@ -35,7 +40,7 @@ class x_aanmelder():
         chrome_options.add_argument("--allow-running-insecure-content")
         chrome_options.add_argument("--allow-insecure-localhost")
         chrome_options.add_argument("--window-size=1920,1080")
-        driver = webdriver.Chrome(options=chrome_options)
+        driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
         return driver
 
     def enter_credentials(self):
@@ -92,6 +97,7 @@ class x_aanmelder():
         raise Exception("Cannot find booking in 'schedule'.")
 
     def run_aanmelder(self):
+        token = None
         self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
         if len(self.requested_bookings) == 0:
@@ -110,6 +116,7 @@ class x_aanmelder():
             print("Trying to reserve %s at time %s" % (title, start_time))
 
             while not self.reserved:
+
                 # Go to website
                 self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
 
@@ -126,16 +133,18 @@ class x_aanmelder():
                     log_in_button[0].click()
                     print("Logging in..")
                     self.enter_credentials()
+                    token = None
 
                 # Get session token (can be find in the url that leads to the reservation. token is regenerated after each login).
-                print("Getting token...")
-                WebDriverWait(self.driver, 20).until(
-                    ec.presence_of_element_located((By.XPATH, "//a[text()[contains(.,'Reserveren')]]")))
-                reserveren_btn = self.driver.find_element(By.XPATH, "//a[text()[contains(.,'Reserveren')]]")
-                reserveren_href = reserveren_btn.get_attribute('href')
-                token_start, token_end = reserveren_href.find("token") + 6, reserveren_href.find("&redirect")
-                token = reserveren_href[token_start:token_end]
-                print("Got token")
+                if token is None:
+                    print("Getting token...")
+                    WebDriverWait(self.driver, 20).until(
+                        ec.presence_of_element_located((By.XPATH, "//a[text()[contains(.,'Reserveren')]]")))
+                    reserveren_btn = self.driver.find_element(By.XPATH, "//a[text()[contains(.,'Reserveren')]]")
+                    reserveren_href = reserveren_btn.get_attribute('href')
+                    token_start, token_end = reserveren_href.find("token") + 6, reserveren_href.find("&redirect")
+                    token = reserveren_href[token_start:token_end]
+                    print("Got token")
 
                 # Wait for 13:00
                 if datetime.now().time() < t(13, 00): print("Waiting until 13:00 before attempting to make a booking.")
@@ -182,7 +191,7 @@ class x_aanmelder():
                     success = https_addBooking(booking_id, token)
                     if success:
                         print("Successfully made booking at time %s." % str(datetime.now().time()))
-                        if is_calendar_available():
+                        if get_calendar_service() is not None:
                             add_schedule_booking_to_calendar(scheduled_booking, booked=True)
                         self.reserved = True
                         continue

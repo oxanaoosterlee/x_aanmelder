@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 from dateutil import parser
 
-from x_aanmelder.google.OAuth.oauth import get_calendar_service
+from xaanmelder.googleapi.OAuth.oauth import get_calendar_service
 
 own_tz = pytz.timezone('Europe/Amsterdam')
 booking_tz = pytz.utc
@@ -61,7 +61,7 @@ def add_calendar_event(title, start, end, location, trainer, booked=False):
         'summary': title,
         'location': location,
         'colorId': "6",
-        'description': 'Trainer: %s\nCalendar event added by x_aanmelder.' % trainer,
+        'description': 'Trainer: %s\nCalendar event added by xaanmelder.' % trainer,
         'start': {
             'dateTime': start.isoformat(),
             'timeZone': 'Europe/Amsterdam',
@@ -153,10 +153,10 @@ def get_all_x_aanmelder_events():
     events = service.events().list(calendarId='primary', timeMin=from_t, timeMax=until_t).execute()
 
     # Find the events that are made by this script by looking at the description of the event (if description exists).
-    # When making an event with this script, the description contains the word 'x_aanmelder'
+    # When making an event with this script, the description contains the word 'xaanmelder'
     # This can be seen in add_calendar_event()
     for event in events['items']:
-        if 'description' in event and 'x_aanmelder' in event['description']:
+        if 'description' in event and 'xaanmelder' in event['description']:
             x_aanmelder_events.append(event)
 
     return x_aanmelder_events
