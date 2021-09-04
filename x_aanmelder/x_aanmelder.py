@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
 from Attendance import Attendance
-from gcalendar.gcalendar import *
+from google.gcalendar import *
 from https_addBooking import https_addBooking
 from https_bookings import https_bookings
 from https_schedule import https_schedule

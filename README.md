@@ -44,18 +44,14 @@ making changes to `attendance.csv`, run `python3 Attendance.py`.
 Note: when removing an `x`, it will also remove the class from your calendar. However, when removing a class that has
 already been booked, the booking will not be made undone. This has to be done manually through the website.
 
-### Google Calendar
+### Google Authentication
 
-To automatically enable the script to put reserved bookings in google calendar, take the following steps:
+To use Google Calendar or Google Sheets, it is required to setup OAuth 2.0.
+1. Install the google client library `pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
+2. Follow the instructions here (https://support.google.com/cloud/answer/6158849?hl=en) to create Desktop Application Credentials.
+3. Download the credentials and store as `credentials.json` in the `/data/oauth` directory.
+4. In the `/x_aanmelder/google/OAuth` directory, run `python3 oauth.py` once to finish the authentication process.
 
-1. Enable the google calendar API (https://developers.google.com/calendar/quickstart/python).
-3. After enabling using the website above, store the acquired file 'credentials.json' in the `/data/gcalendar` directory.
-   Alternatively, acquire OAuth 2.0 credentials using the google cloud console, just make sure the .json file is
-   called `credentials.json`.
-4. Install the google client
-   library `pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
-5. In the `/x_aanmelder/gcalendar` directory, run `python3 init_calendar.py` once to finish the authentication process.
 
 ### Notes
-
 - If you want to add extra locations, you can add these in `https_bookings` (the `location_names` list).

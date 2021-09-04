@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from gcalendar.gcalendar import *
+from google.gcalendar import *
 from https_bookings import https_bookings
 
 own_tz = pytz.timezone('Europe/Amsterdam')
