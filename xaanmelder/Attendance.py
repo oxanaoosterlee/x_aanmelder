@@ -1,9 +1,8 @@
 #!/usr/bin/python3
-
 import pandas as pd
-from xaanmelder.googleapi.gcalendar import *
-from xaanmelder.googleapi.gsheets import *
-from xaanmelder.https_bookings import https_bookings
+from googleapi.gcalendar import *
+from googleapi.gsheets import *
+from https_bookings import https_bookings
 import pytz
 import os
 own_tz = pytz.timezone('Europe/Amsterdam')
