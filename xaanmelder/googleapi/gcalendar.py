@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import pytz
 from dateutil import parser
 
-from xaanmelder.googleapi.OAuth.oauth import get_calendar_service
+from .OAuth.oauth import get_calendar_service
 
 own_tz = pytz.timezone('Europe/Amsterdam')
 booking_tz = pytz.utc

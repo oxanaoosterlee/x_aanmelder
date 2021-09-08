@@ -3,7 +3,7 @@ import json
 from dateutil import parser
 from datetime import datetime, timedelta
 import pytz
-from xaanmelder.https_locations import https_locations
+from https_locations import https_locations
 
 own_tz = pytz.timezone('Europe/Amsterdam')
 booking_tz = pytz.utc

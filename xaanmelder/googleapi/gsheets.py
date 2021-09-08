@@ -3,7 +3,7 @@ import pandas as pd
 import pytz
 from dateutil import parser
 
-from xaanmelder.googleapi.OAuth.oauth import get_sheets_service
+from .OAuth.oauth import get_sheets_service
 
 own_tz = pytz.timezone('Europe/Amsterdam')
 
