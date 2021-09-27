@@ -19,6 +19,10 @@ def get_sheet_data():
                                 range=RANGE_NAME).execute()
     values = result.get('values', [])
 
+    # If sheet is empty, return empty dataframe.
+    if len(values) == 0:
+        return pd.DataFrame([],[])
+
     # Make sure each row has the required number of elements (equal to the number of column headers).
     for row in values[1:]:
         if len(row) < len(values[0]):
@@ -27,12 +31,16 @@ def get_sheet_data():
     df = pd.DataFrame(values[1:], columns=values[0])
 
     # Change 'Start' and 'End' columns to DateTime formats for easier handling.
-    df['Start'] = df.apply(lambda x: parser.parse(x.Date + " " + x.Start, dayfirst=True).astimezone(own_tz), axis=1)
-    df['End'] = df.apply(lambda x: parser.parse(x.Date + " " + x.End, dayfirst=True).astimezone(own_tz), axis=1)
+    # Only necessary when dataframe is not empty
+    if not df.empty:
+        df['Start'] = df.apply(lambda x: parser.parse(x.Date + " " + x.Start, dayfirst=True).astimezone(own_tz), axis=1)
+        df['End'] = df.apply(lambda x: parser.parse(x.Date + " " + x.End, dayfirst=True).astimezone(own_tz), axis=1)
 
 
     # Convert None to NaN
     df = df.fillna(value=np.nan)
+    print("Got sheet data: " + str(df))
+
     return df
 
 
