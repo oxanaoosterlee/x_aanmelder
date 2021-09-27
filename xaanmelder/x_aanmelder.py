@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import os
 import time
 from datetime import time as t
@@ -17,8 +16,8 @@ from https_schedule import https_schedule
 from dateutil import parser
 import pytz
 from datetime import datetime
-from xaanmelder.googleapi.OAuth.oauth import get_calendar_service
-from xaanmelder.googleapi.gcalendar import add_schedule_booking_to_calendar
+from googleapi.OAuth.oauth import get_calendar_service
+from googleapi.gcalendar import add_schedule_booking_to_calendar
 
 class x_aanmelder():
     def __init__(self):
@@ -37,6 +36,8 @@ class x_aanmelder():
         # Don't show the window
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--allow-running-insecure-content")
         chrome_options.add_argument("--allow-insecure-localhost")
         chrome_options.add_argument("--window-size=1920,1080")

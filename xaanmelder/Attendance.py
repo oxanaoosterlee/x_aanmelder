@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-import pandas as pd
 from googleapi.gcalendar import *
 from googleapi.gsheets import *
 from https_bookings import https_bookings
