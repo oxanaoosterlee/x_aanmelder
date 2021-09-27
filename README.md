@@ -50,7 +50,7 @@ To use Google Calendar or Google Sheets, it is required to setup OAuth 2.0.
 1. Install the google client library `pip3 install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib`
 2. Follow the instructions here (https://support.google.com/cloud/answer/6158849?hl=en) to create Desktop Application Credentials.
 3. Download the credentials and store as `credentials.json` in the `/data/oauth` directory.
-4. In the `/x_aanmelder/google/OAuth` directory, run `python3 oauth.py` once to finish the authentication process.
+4. In the `/x_aanmelder/googleapi/OAuth` directory, run `python3 oauth.py` once to finish the authentication process.
 
 
 ### Notes
