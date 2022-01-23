@@ -58,6 +58,9 @@ class Attendance:
         # Sort by start date/time
         new_attendance = new_attendance.sort_values(by=['Start'], ignore_index=True)
 
+        # Set 'start' column dtype correctly to avoid issues with merging
+        new_attendance['Start'] = pd.to_datetime(new_attendance['Start'])
+
         # Merge attendance information from old file into the new dataframe
         # Only merge old attendance information when it actually exists.
         old_attendance = get_sheet_data() if self.use_gsheets else self.read_from_csv(self.attendance_file)
