@@ -1,6 +1,6 @@
 from googleapi.gcalendar import *
 from googleapi.gsheets import *
-from https_bookings import https_bookings
+from api_calls.https_bookable_slots import https_bookable_slots
 import pytz
 import os
 own_tz = pytz.timezone('Europe/Amsterdam')
@@ -34,22 +34,27 @@ class Attendance:
 
         # Get all available 'bookings' (classes) for the next week. NOTE: returned in UTC time.
         # Store the bookings in a dataframe.
-        next_week_bookings = https_bookings(days=7)
+        next_week_bookings = https_bookable_slots(days=7)
         for booking in next_week_bookings:
             # Keep start and end 'datetime' for easier handling.
             # 'Day' and 'Date' are made human-readible immediately.
             # 'Start' and 'End' will be changed to human-readible times when storing as .csv.
-            start = parser.isoparse(booking['start']).astimezone(own_tz)
-            end = parser.isoparse(booking['end']).astimezone(own_tz)
+            start = parser.isoparse(booking['startDate']).astimezone(own_tz)
+            end = parser.isoparse(booking['endDate']).astimezone(own_tz)
 
+            # Skip classes without description, these are things such as 'masseur' and 'physiotherapist'
+            if booking['booking']['description'] is None:
+                continue
+
+            supervisors = booking['booking']['supervisors']
             new_attendance = new_attendance.append(
                 {'Day': start.strftime("%a"),
                  'Date': start.strftime("%d-%m"),
                  'Start': start,
                  'End': end,
-                 'Class': booking['description'],
-                 'Trainer': booking['trainerFirstName'] if booking['trainerFirstName'] else "",
-                 'Location': booking['locationNameEN'],
+                 'Class': booking['booking']['description'],
+                 'Trainer': supervisors[0]['firstName'] + " " + supervisors[0]['lastName'] if len(supervisors) > 0 else "",
+                 'Location': booking['booking']['product']['description'],
                  'Attend': '',
                  },
                 ignore_index=True
@@ -92,7 +97,7 @@ class Attendance:
 
         # Get requested bookings with a start time between now and tomorrow 13:00
         from_dt = datetime.now(own_tz)
-        until_dt = datetime.now(own_tz).replace(hour=13, minute=0, second=0, microsecond=0)
+        until_dt = datetime.now(own_tz).replace(hour=23, minute=0, second=0, microsecond=0)
         until_dt += timedelta(days=1)
         subset = subset.loc[(subset['Start'] >= from_dt) & (subset['Start'] < until_dt)]
 

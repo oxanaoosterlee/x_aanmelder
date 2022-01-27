@@ -1,23 +1,27 @@
+import json
 import os
 import time
+from datetime import datetime
 from datetime import time as t
 
+import pytz
+from dateutil import parser
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from Attendance import Attendance
-from https_addBooking import https_addBooking
-from https_bookings import https_bookings
-from https_schedule import https_schedule
 
-from dateutil import parser
-import pytz
-from datetime import datetime
-from googleapi.OAuth.oauth import get_calendar_service
 from googleapi.gcalendar import add_schedule_booking_to_calendar
+from googleapi.OAuth.oauth import get_calendar_service
+from api_calls.https_participations import https_participations
+from api_calls.https_bookable_slots import https_bookable_slots
+from Attendance import Attendance
+
+from localStorage import localStorage
+
+
 
 class x_aanmelder():
     def __init__(self):
@@ -64,8 +68,8 @@ class x_aanmelder():
 
         # Weird empty page appears after logging in, so refresh after it loads.
         WebDriverWait(self.driver, 20).until(
-            ec.presence_of_element_located((By.XPATH, "//div[@class='dialog__content']")))
-        self.driver.get("https://x.tudelft.nl/nl/members/dashboard")
+            ec.presence_of_element_located((By.XPATH, "//body[@class='ng-tns-0-0']")))
+        self.driver.get("https://x.tudelft.nl/dashboard")
 
     def find_requested_booking_in_bookings(self, title, time):
         """ Check in the bookings (the schedule of all available lessons), if the requested booking is there. If not,
@@ -73,11 +77,11 @@ class x_aanmelder():
         @param title is string with booking name
         @param time is dateTime with start time.
         """
-        booking_schedule = https_bookings()
+        booking_schedule = https_bookable_slots()
         for booking in booking_schedule:
-            if title.lower() in booking['description'].lower():
-                if time == parser.isoparse(booking['start']):
-                    print("Booking id in 'booking' is: %d" % booking['booking_id'])
+            if title.lower() in booking['booking']['description'].lower():
+                if time == parser.isoparse(booking['startDate']):
+                    print("Found requested booking %s at time %s" % (title, time))
                     return booking
         # If it cannot be found, something is wrong.
         print(booking_schedule)
@@ -98,20 +102,20 @@ class x_aanmelder():
         raise Exception("Cannot find booking in 'schedule'.")
 
     def run_aanmelder(self):
-        token = None
-        self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
-
         if len(self.requested_bookings) == 0:
             print("No bookings to make today.")
+        
+        self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
+        
         # Loop through all requested bookings.
         for requested_booking in self.requested_bookings:
             self.reserved = False
 
             # Check if requested booking is valid (can be found in the schedule calendar).
-            self.find_requested_booking_in_bookings(title=requested_booking['Class'], time=requested_booking['Start'])
+            # requested_booking_data contains info required for making the booking.
+            requested_booking_data = self.find_requested_booking_in_bookings(title=requested_booking['Class'], time=requested_booking['Start'])
 
             # Some booking details
-            location_name = requested_booking['Location']
             start_time = requested_booking['Start']
             title = requested_booking['Class']
             print("Trying to reserve %s at time %s" % (title, start_time))
@@ -120,86 +124,59 @@ class x_aanmelder():
 
                 # Go to website
                 self.driver.get("https://x.tudelft.nl/nl/home?return_url=null")
+                time.sleep(0.5)
 
-                # Wait until 12:59 before logging in (enrollment starts at 13:00)
+                # Wait until 12:59 before logging in (enrollment starts at 13:00) 
                 if datetime.now().time() < t(12, 59): print("Waiting until 12:59 before logging in.")
                 while datetime.now().time() < t(12, 59): time.sleep(2)
 
-                # Click on the TU logo thingy (only necessary if it is required to log in again)
+                # Click on TUDelft login button (only necessary if it is required to log in again)
                 # When revisiting the page, it is possible to still be logged in.
-                log_in_button = self.driver.find_elements(By.LINK_TEXT, 'tudelft')
+                log_in_button = self.driver.find_elements_by_xpath("//*[contains(text(),'TUDelft')]")
 
                 # The button can only be found when it is needed to log in again.
                 if len(log_in_button) > 0:
                     log_in_button[0].click()
+
+                    # Select TU Delft login (wait 0.5 sec for the xpath to be correct)
+                    time.sleep(0.5)
+                    log_in_button_2 = self.driver.find_elements_by_xpath("//*[@class='remaining'][contains(@data-keywords, 'delft')]")
+                    log_in_button_2[0].click()
+
                     print("Logging in..")
                     self.enter_credentials()
-                    token = None
 
-                # Get session token (can be find in the url that leads to the reservation. token is regenerated after each login).
-                if token is None:
-                    print("Getting token...")
-                    WebDriverWait(self.driver, 20).until(
-                        ec.presence_of_element_located((By.XPATH, "//a[text()[contains(.,'Reserveren')]]")))
-                    reserveren_btn = self.driver.find_element(By.XPATH, "//a[text()[contains(.,'Reserveren')]]")
-                    reserveren_href = reserveren_btn.get_attribute('href')
-                    token_start, token_end = reserveren_href.find("token") + 6, reserveren_href.find("&redirect")
-                    token = reserveren_href[token_start:token_end]
-                    print("Got token")
+
+                # Get dictionary of local storage that contains user info for making the booking
+                local_storage = json.loads(localStorage(self.driver).items()['delcom_auth'])
 
                 # Wait for 13:00
                 if datetime.now().time() < t(13, 00): print("Waiting until 13:00 before attempting to make a booking.")
-                while datetime.now().time() < t(13, 00): time.sleep(2)
+                while datetime.now().time() < t(13, 00): time.sleep(8)
 
                 # Requesting the schedule can only be done from 13:00. Keep retrying until the desired schedule is returned.
                 # If schedule is requested too early, the response will be an empty schedule.
                 print("Trying to find requested lesson available for booking..")
-                i = 0
-                while (True):
-                    # Returns the schedule (available bookings) for a specific location.
-                    # (Usually for today's evening and tomorrow's morning)
-                    schedule_i = https_schedule(location_name, token)
-
-                    # Only keep the schedule for the requested date
-                    schedule = [x for x in schedule_i if
-                                parser.parse(x['day'], dayfirst=True).date() == start_time.date()]
-
-                    if len(schedule) != 1:
-                        # Desired schedule is not available yet (len(schedule) == 1 if correct day can found).
-                        # Retry.
-                        time.sleep(0.5)
-                        i += 1
-                        print("\rRetrying.. i = %d" % (i), end="")
-                    else:
-                        print("\n")
-                        break
-
-                scheduled_booking = self.find_booking_in_schedule(title=title, time=start_time, schedule=schedule[0])
-                print("Found the requested lesson!")
 
                 # Check if lesson is already booked.
-                if scheduled_booking['Booked']:
-                    print("Already booked!")
-                    self.reserved = True
-                    return
+                for participant in requested_booking_data['booking']['participations']:
+                        if participant['memberId'] == local_storage['member']['id']:
+                            print("Already booked!")
+                            self.reserved = True
+                            return
 
-                # Get booking id of the lesson and make a booking.
-                booking_id = scheduled_booking['Booking_id']
-                print("The retrieved booking id is %s" % booking_id)
                 # Make booking
-                if int(scheduled_booking['Bezetting']) < int(scheduled_booking['Max_participants']):
-                    print("Requesting booking at time %s." % str(datetime.now().time()))
-                    success = https_addBooking(booking_id, token)
-                    if success:
-                        print("Successfully made booking at time %s." % str(datetime.now().time()))
-                        if get_calendar_service() is not None:
-                            add_schedule_booking_to_calendar(scheduled_booking, booked=True)
-                        self.reserved = True
-                        continue
-                    else:
-                        print("Failed to make booking.")
+                print("Requesting booking at time %s." % str(datetime.now().time()))
+                success = https_participations(requested_booking_data, local_storage)
+                if success:
+                    print("Successfully made booking at time %s." % str(datetime.now().time()))
+                    if get_calendar_service() is not None:
+                        add_schedule_booking_to_calendar(requested_booking_data, booked=True)
+                    self.reserved = True
+                    continue
                 else:
-                    print("Lesson full")
+                    print("Failed to make booking.")
+
 
 
                 # Retrying to make a booking. Need to refresh the page in case token expires and

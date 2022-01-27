@@ -21,15 +21,16 @@ def add_schedule_booking_to_calendar(booking, booked=True):
     @param booked is usually True because in the main loop you only call this function
     after a booking succeeds.
     """
-    title = booking['Description']
-    start = parser.parse(booking['Start_date']).astimezone(own_tz)
-    end = parser.parse(booking['End_date']).astimezone(own_tz)
+    title = booking['booking']['description']
+    start = parser.parse(booking['startDate']).astimezone(own_tz)
+    end = parser.parse(booking['endDate']).astimezone(own_tz)
     # Sometimes no trainer information is available
-    if 'First_name' and 'Last_name' in booking:
-        trainer = booking['First_name'] + " " + booking["Last_name"]
+    supervisors = booking['booking']['supervisors']
+    if len(supervisors) > 0:
+        trainer = supervisors[0]['firstName'] + " " + supervisors[0]['lastName']
     else:
         trainer = ""
-    location = booking['Location']
+    location = booking['booking']['product']['description']
 
     add_calendar_event(title, start, end, location, trainer, booked=booked)
     return True
