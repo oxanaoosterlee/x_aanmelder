@@ -57,6 +57,7 @@ def write_sheet_data(attendance_df):
     service = get_sheets_service()
     sheet = service.spreadsheets()
 
+    sheet.values().clear(spreadsheetId = SPREADSHEET_ID, range=RANGE_NAME).execute()
     response_date = sheet.values().update(
         spreadsheetId=SPREADSHEET_ID,
         valueInputOption='RAW',
